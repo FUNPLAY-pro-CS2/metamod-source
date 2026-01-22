@@ -42,23 +42,6 @@ jobs:
       DEPENDENCIES_ROOT: ${{ github.workspace }}/dependencies
 
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: false
-          path: metamod-source
-
-      - name: Select HL2SDKs
-        run: echo 'SDKS=["cs2"]' >> $GITHUB_ENV
-
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        env:
-          cache-name: hl2sdk
-        with:
-          path: ${{ env.DEPENDENCIES_ROOT }}
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ join(fromJSON(env.SDKS), '') }}
-          restore-keys: ${{ runner.os }}-build-${{ env.cache-name }}-
-
       - name: Install Linux dependencies
         if: matrix.os_short == 'linux'
         run: |
@@ -72,6 +55,23 @@ jobs:
             linux-libc-dev \
             lib32z1-dev \
             clang-10
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          path: metamod-source
+
+      - name: Select HL2SDKs
+        run: echo 'SDKS=["cs2"]' >> $GITHUB_ENV
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        env:
+          cache-name: hl2sdk
+        with:
+          path: ${{ env.DEPENDENCIES_ROOT }}
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ join(fromJSON(env.SDKS), '') }}
+          restore-keys: ${{ runner.os }}-build-${{ env.cache-name }}-
 
       - name: Install Python dependencies
         run: |
@@ -106,12 +106,6 @@ jobs:
             git pull
             git submodule update --init --recursive
           fi
-
-      - name: Init submodules
-        if: matrix.os_short == 'linux'
-        working-directory: metamod-source
-        run: |
-          git submodule update --init --recursive
 
       - name: Select clang compiler
         if: matrix.os_short == 'linux'
