@@ -75,15 +75,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          python3 -m pip install --upgrade pip setuptools wheel
-
-      - name: Install AMBuild
-        shell: bash
-        run: |
-          git clone https://github.com/alliedmodders/ambuild
-          cd ambuild
-          python3 setup.py install
-          cd ..
+          python3 -m pip install --upgrade pip setuptools wheel ambuild
 
       - name: Install CS2 SDK (custom fork)
         shell: bash
