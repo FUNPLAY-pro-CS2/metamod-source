@@ -82,17 +82,20 @@ jobs:
         run: |
           mkdir -p ${{ env.DEPENDENCIES_FOLDER }}
           cd ${{ env.DEPENDENCIES_FOLDER }}
-
-          HL2SDK_DIR="hl2sdk-cs2"
-
-          if [ ! -d "$HL2SDK_DIR/.git" ]; then
+      
+          SDK_ROOT="hl2sdk"
+          SDK_DIR="$SDK_ROOT/cs2"
+      
+          mkdir -p "$SDK_ROOT"
+      
+          if [ ! -d "$SDK_DIR/.git" ]; then
             git clone --recursive \
               --branch SlynxCZ/cs2 \
               --single-branch \
               https://github.com/FUNPLAY-pro-CS2/hl2sdk.git \
-              "$HL2SDK_DIR"
+              "$SDK_DIR"
           else
-            cd "$HL2SDK_DIR"
+            cd "$SDK_DIR"
             git fetch
             git checkout SlynxCZ/cs2
             git pull
@@ -121,7 +124,7 @@ jobs:
           cd build
           python3 ../configure.py --enable-optimize \
             --sdks=${{ join(fromJSON(env.SDKS)) }} \
-            --hl2sdk-root=${{ env.DEPENDENCIES_ROOT }}
+            --hl2sdk-root=${{ env.DEPENDENCIES_ROOT }}/hl2sdk
           ambuild
 
       - name: Upload build artifacts (Linux)
