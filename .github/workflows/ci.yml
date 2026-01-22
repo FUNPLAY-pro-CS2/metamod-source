@@ -82,8 +82,8 @@ jobs:
         run: |
           git clone https://github.com/alliedmodders/ambuild
           cd ambuild
-          python setup.py install
-          cd ../
+          python3 setup.py install
+          cd ..
 
       - name: Install CS2 SDK (custom fork)
         shell: bash
@@ -126,7 +126,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          python ../configure.py --enable-optimize \
+          python3 ../configure.py --enable-optimize \
             --sdks=${{ join(fromJSON(env.SDKS)) }} \
             --hl2sdk-root=${{ env.DEPENDENCIES_ROOT }}
           ambuild
