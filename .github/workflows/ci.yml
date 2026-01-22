@@ -75,7 +75,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          python3 -m pip install --upgrade pip setuptools wheel ambuild
+          python3 -m pip install --upgrade pip setuptools wheel
 
       - name: Install CS2 SDK (custom fork)
         shell: bash
@@ -106,6 +106,13 @@ jobs:
           echo "CXX=${{ matrix.compiler_cxx }}" >> $GITHUB_ENV
           ${{ matrix.compiler_cc }} --version
           ${{ matrix.compiler_cxx }} --version
+
+      - name: Install AMBuild
+        run: |
+          git clone https://github.com/alliedmodders/ambuild.git ambuild
+          cd ambuild
+          pip3 install .
+          cd ..
 
       - name: Build
         working-directory: metamod-source
