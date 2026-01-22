@@ -23,9 +23,9 @@ jobs:
             compiler_cc: msvc-vs2019
           - os: ubuntu-22.04
             os_short: linux
-            compiler_cc: clang-14
-            compiler_cxx: clang++-14
-            compiler_install: clang-14
+            compiler_cc: clang-10
+            compiler_cxx: clang++-10
+            compiler_install: clang-10
             use_container: true
 
       fail-fast: false
@@ -64,13 +64,14 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
+            python3 python3-pip \
             git ca-certificates \
             gcc-multilib g++-multilib \
             libstdc++6 lib32stdc++6 \
             libc6-dev libc6-dev-i386 \
-            linux-libc-dev linux-libc-dev:i386 \
+            linux-libc-dev \
             lib32z1-dev \
-            ${{ matrix.compiler_install }}
+            clang-10
 
       - name: Install Python dependencies
         run: |
