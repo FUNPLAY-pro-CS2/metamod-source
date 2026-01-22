@@ -42,7 +42,7 @@ jobs:
           path: metamod-source
       
       - name: Select HL2SDKs
-        run: echo 'SDKS=["episode1","tf2","l4d2","cs2","insurgency"]' >> $GITHUB_ENV
+        run: echo 'SDKS=["cs2"]' >> $GITHUB_ENV
 
       - name: Cache dependencies
         uses: actions/cache@v3
@@ -62,15 +62,19 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
 
-      - name: Install dependencies
+      - name: Install CS2 SDK (custom fork)
         shell: bash
         run: |
           mkdir -p ${{ env.DEPENDENCIES_FOLDER }}
           cd ${{ env.DEPENDENCIES_FOLDER }}
-
-          # Satisfy checkout-deps requirement for a "metamod-source" folder.
-          mkdir -p metamod-source
-          ../metamod-source/support/checkout-deps.sh -s ${{ join(fromJSON(env.SDKS)) }}
+      
+          HL2SDK_DIR="hl2sdk-cs2"
+      
+          git clone --recursive \
+            --branch SlynxCZ/cs2 \
+            --single-branch \
+            https://github.com/FUNPLAY-pro-CS2/hl2sdk.git \
+            "$HL2SDK_DIR"
 
       - name: Install Linux dependencies
         if: startsWith(runner.os, 'Linux')
