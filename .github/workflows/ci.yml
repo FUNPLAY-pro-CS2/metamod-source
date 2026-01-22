@@ -102,6 +102,11 @@ jobs:
             git submodule update --init --recursive
           fi
 
+      - name: Export CS2 SDK env
+        if: matrix.os_short == 'linux'
+        run: |
+          echo "HL2SDKCS2=${{ env.DEPENDENCIES_ROOT }}/hl2sdk/cs2" >> $GITHUB_ENV
+
       - name: Select clang compiler
         if: matrix.os_short == 'linux'
         run: |
@@ -123,8 +128,7 @@ jobs:
           mkdir build
           cd build
           python3 ../configure.py --enable-optimize \
-            --sdks=${{ join(fromJSON(env.SDKS)) }} \
-            --hl2sdk-root=${{ env.DEPENDENCIES_ROOT }}/hl2sdk
+            --sdks=${{ join(fromJSON(env.SDKS)) }}
           ambuild
 
       - name: Upload build artifacts (Linux)
