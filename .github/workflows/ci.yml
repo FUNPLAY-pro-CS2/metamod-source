@@ -110,6 +110,25 @@ jobs:
           python ../configure.py --enable-optimize --sdks=${{ join(fromJSON(env.SDKS)) }} --hl2sdk-root=${{ env.DEPENDENCIES_ROOT }}
           ambuild
 
+      - name: Upload build artifacts (Linux)
+        if: startsWith(runner.os, 'Linux')
+        uses: actions/upload-artifact@v4
+        with:
+          name: metamod-cs2-linux-${{ matrix.compiler_cc }}
+          path: |
+            metamod-source/build/package/**
+            metamod-source/build/addons/**
+            metamod-source/build/**/*.so
+      
+      - name: Upload build artifacts (Windows)
+        if: startsWith(runner.os, 'Windows')
+        uses: actions/upload-artifact@v4
+        with:
+          name: metamod-cs2-windows-${{ matrix.compiler_cc }}
+          path: |
+            metamod-source/build/package/**
+            metamod-source/build/**/*.dll
+
       - name: Test SourceHook (Optimized)
         working-directory: metamod-source
         shell: bash
