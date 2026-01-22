@@ -67,7 +67,8 @@ jobs:
         run: |
           git clone https://github.com/alliedmodders/ambuild
           cd ambuild
-          python setup.py in
+          python setup.py install
+          cd ../
 
       - name: Install CS2 SDK (custom fork)
         shell: bash
