@@ -109,8 +109,8 @@ jobs:
 
       - name: Init submodules
         if: matrix.os_short == 'linux'
+        working-directory: metamod-source
         run: |
-          cd metamod-source
           git submodule update --init --recursive
 
       - name: Select clang compiler
