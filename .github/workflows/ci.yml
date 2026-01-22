@@ -78,11 +78,22 @@ jobs:
       
           HL2SDK_DIR="hl2sdk-cs2"
       
-          git clone --recursive \
-            --branch SlynxCZ/cs2 \
-            --single-branch \
-            https://github.com/FUNPLAY-pro-CS2/hl2sdk.git \
-            "$HL2SDK_DIR"
+          if [ ! -d "$HL2SDK_DIR/.git" ]; then
+            echo "Cloning SDK..."
+            git clone --recursive \
+              --branch SlynxCZ/cs2 \
+              --single-branch \
+              https://github.com/FUNPLAY-pro-CS2/hl2sdk.git \
+              "$HL2SDK_DIR"
+          else
+            echo "SDK already exists, updating..."
+            cd "$HL2SDK_DIR"
+            git fetch
+            git checkout SlynxCZ/cs2
+            git pull
+            git submodule update --init --recursive
+            git submodule update --remote --merge
+          fi
 
       - name: Install Linux dependencies
         if: startsWith(runner.os, 'Linux')
