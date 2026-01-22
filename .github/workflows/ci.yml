@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: recursive
+          submodules: false
           path: metamod-source
 
       - name: Select HL2SDKs
@@ -110,6 +110,12 @@ jobs:
             linux-libc-dev linux-libc-dev:i386 \
             lib32z1-dev \
             ${{ matrix.compiler_install }}
+
+      - name: Init submodules
+        if: matrix.os_short == 'linux'
+        run: |
+          cd metamod-source
+          git submodule update --init --recursive
 
       - name: Select clang compiler
         if: matrix.os_short == 'linux'
