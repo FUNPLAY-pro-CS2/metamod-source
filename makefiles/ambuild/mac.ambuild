@@ -1,0 +1,25 @@
+# vim: set sts=2 ts=8 sw=2 tw=99 et ft=python:
+#
+# macOS settings (Source 1 only). There is no makefiles/cmake/ twin: the CMake
+# build covers the Source 2 SDKs, which have no macOS builds.
+# Runs after shared.ambuild's ConfigureCompiler().
+
+def ConfigureCxx(cxx, options):
+  cxx.defines += ['OSX', '_OSX', 'POSIX']
+
+  if cxx.version >= 'apple-clang-10.0':
+    cxx.cflags += ['-mmacosx-version-min=10.9', '-stdlib=libc++']
+    cxx.linkflags += [
+      '-mmacosx-version-min=10.9',
+    ]
+  else:
+    cxx.cflags += ['-mmacosx-version-min=10.5']
+    cxx.linkflags += [
+      '-mmacosx-version-min=10.5',
+    ]
+
+  cxx.linkflags += [
+    '-stdlib=libc++',
+    '-lc++',
+  ]
+  cxx.cxxflags += ['-stdlib=libc++']

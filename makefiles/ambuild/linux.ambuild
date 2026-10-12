@@ -1,0 +1,13 @@
+# vim: set sts=2 ts=8 sw=2 tw=99 et ft=python:
+#
+# Linux settings -- AMBuild twin of makefiles/cmake/linux.cmake.
+# Runs after shared.ambuild's ConfigureCompiler().
+
+def ConfigureCxx(cxx, options):
+  cxx.defines += ['LINUX', '_LINUX', 'POSIX', '_FILE_OFFSET_BITS=64']
+  if cxx.family == 'gcc':
+    cxx.linkflags += ['-static-libgcc']
+  elif cxx.family == 'clang':
+    cxx.linkflags += ['-lgcc_eh']
+  cxx.linkflags += ['-static-libstdc++']
+  cxx.linkflags += ['-Wl,--exclude-libs,ALL']

@@ -1,4 +1,8 @@
-# vim: set ts=2 sw=2 tw=99 noet ft=python: 
+# vim: set ts=2 sw=2 tw=99 noet ft=python:
+#
+# The package layout -- AMBuild twin of makefiles/cmake/package.cmake (which
+# lays out the Source 2 x86_64 binaries the same way: addons/metamod/bin/<platform>/).
+# Was support/buildbot/PackageScript.
 import os
 
 builder.SetBuildFolder('package')

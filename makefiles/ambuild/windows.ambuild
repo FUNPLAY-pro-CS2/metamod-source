@@ -1,0 +1,7 @@
+# vim: set sts=2 ts=8 sw=2 tw=99 et ft=python:
+#
+# Windows settings -- AMBuild twin of makefiles/cmake/windows.cmake.
+# Runs after shared.ambuild's ConfigureCompiler().
+
+def ConfigureCxx(cxx, options):
+  cxx.defines += ['WIN32', '_WINDOWS']

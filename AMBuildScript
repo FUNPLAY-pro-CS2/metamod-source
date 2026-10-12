@@ -33,6 +33,19 @@ HL2SdkHelpers = builder.Eval(os.path.join(ResolveManifests('hl2sdk_manifests', '
 })
 S2SdkHelpers = builder.Eval(os.path.join(ResolveManifests('s2sdk_manifests', 's2sdk-manifests'), 'SdkHelpers.ambuild'))
 
+# The build settings, split the same way as the CMake side (makefiles/cmake/):
+# shared.ambuild <-> shared.cmake, linux.ambuild <-> linux.cmake,
+# windows.ambuild <-> windows.cmake, package.ambuild <-> package.cmake; the
+# binaries' AMBuilders (core/, loader/) <-> CMakeBuilder.cmake. mac.ambuild has
+# no twin: the CMake build (CMakeLists.txt) is for the Source 2 SDKs only,
+# Source 1 builds with AMBuild.
+Shared = builder.Import('makefiles/ambuild/shared.ambuild')
+Platforms = {
+  'linux': builder.Import('makefiles/ambuild/linux.ambuild'),
+  'mac': builder.Import('makefiles/ambuild/mac.ambuild'),
+  'windows': builder.Import('makefiles/ambuild/windows.ambuild'),
+}
+
 class MMSConfig(object):
   def __init__(self):
     self.sdk_manifests = []
@@ -161,6 +174,11 @@ class MMSConfig(object):
       return S2SdkHelpers
     return HL2SdkHelpers
 
+  def Platform(self, cxx):
+    if cxx.target.platform not in Platforms:
+      raise Exception('Unsupported target platform: {0}'.format(cxx.target.platform))
+    return Platforms[cxx.target.platform]
+
   def configure(self):
     builder.AddConfigureFile('pushbuild.txt')
 
@@ -171,173 +189,11 @@ class MMSConfig(object):
       self.configure_cxx(cxx)
 
   def configure_cxx(self, cxx):
-    if cxx.behavior == 'gcc':
-      cxx.defines += [
-        'stricmp=strcasecmp',
-        '_stricmp=strcasecmp',
-        '_snprintf=snprintf',
-        '_vsnprintf=vsnprintf',
-        'HAVE_STDINT_H',
-        'GNUC',
-      ]
-      cxx.cflags += [
-        '-pipe',
-        '-fno-strict-aliasing',
-        '-Wall',
-        '-Werror',
-        '-Wno-uninitialized',
-        '-Wno-sign-compare',
-        '-Wno-unused',
-        '-Wno-switch',
-        '-Wno-unknown-pragmas',
-        '-Wno-dangling-else',
-        '-msse',
-        '-fPIC',
-      ]
-
-      cxx.cxxflags += ['-std=c++17']
-      if (cxx.version >= 'gcc-4.0') or cxx.family == 'clang':
-        cxx.cflags += ['-fvisibility=hidden']
-        cxx.cxxflags += ['-fvisibility-inlines-hidden']
-      cxx.cxxflags += [
-        '-fno-exceptions',
-        '-fno-rtti',
-        '-fno-threadsafe-statics',
-        '-Wno-non-virtual-dtor',
-        '-Wno-overloaded-virtual',
-        '-Wno-register',
-      ]
-      if (cxx.version >= 'gcc-4.7' or cxx.family == 'clang'):
-        cxx.cxxflags += ['-Wno-delete-non-virtual-dtor']
-      if cxx.family == 'gcc':
-        cxx.cflags += [
-          '-mfpmath=sse',
-          '-Wno-class-memaccess'
-        ]
-      if cxx.family == 'clang':
-        cxx.cxxflags += ['-Wno-implicit-exception-spec-mismatch']
-        if cxx.version >= 'clang-3.9' or cxx.version >= 'apple-clang-10.0':
-          cxx.cxxflags += ['-Wno-expansion-to-defined']
-        if cxx.version >= 'clang-3.6' or cxx.version >= 'apple-clang-7.0':
-          cxx.cxxflags += ['-Wno-inconsistent-missing-override']
-        if cxx.version >= 'apple-clang-5.1' or cxx.version >= 'clang-3.4':
-          cxx.cxxflags += ['-Wno-deprecated-register']
-        else:
-          cxx.cxxflags += ['-Wno-deprecated']
-      
-      # Work around SDK warnings.
-      if cxx.version >= 'clang-10.0' or cxx.version >= 'apple-clang-12.0':
-        cxx.cflags += [
-          '-Wno-implicit-int-float-conversion',
-          '-Wno-tautological-overlap-compare',
-        ]
-      if cxx.version >= 'clang-13.0':
-        cxx.cflags += [
-          '-Wno-ordered-compare-function-pointers',
-        ]
-
-    elif cxx.like('msvc'):
-      if builder.options.debug == '1':
-        cxx.cflags += ['/MTd']
-        cxx.linkflags += ['/NODEFAULTLIB:libcmt']
-      else:
-        cxx.cflags += ['/MT']
-      cxx.defines += [
-        '_CRT_SECURE_NO_DEPRECATE',
-        '_CRT_SECURE_NO_WARNINGS',
-        '_CRT_NONSTDC_NO_DEPRECATE',
-      ]
-      cxx.cflags += [
-        '/W3',
-        '/Zi',
-        '/EHsc',
-        '/std:c++17',
-      ]
-      cxx.cxxflags += ['/TP']
-      
-      cxx.linkflags += [
-        '/SUBSYSTEM:WINDOWS',
-        'kernel32.lib',
-        'user32.lib',
-        'gdi32.lib',
-        'winspool.lib',
-        'comdlg32.lib',
-        'advapi32.lib',
-        'shell32.lib',
-        'ole32.lib',
-        'oleaut32.lib',
-        'uuid.lib',
-        'odbc32.lib',
-        'odbccp32.lib',
-      ]
-
-    # Optimization
-    if builder.options.opt == '1':
-      cxx.defines += ['NDEBUG']
-      if cxx.behavior == 'gcc':
-        cxx.cflags += ['-O3']
-      elif cxx.behavior == 'msvc':
-        cxx.cflags += ['/Ox', '/Zo']
-        cxx.linkflags += ['/OPT:ICF', '/OPT:REF']
-
-    # Debugging
-    if builder.options.debug == '1':
-      cxx.defines += ['DEBUG', '_DEBUG']
-      if cxx.behavior == 'gcc':
-        cxx.cflags += ['-g3']
-      elif cxx.behavior == 'msvc':
-        cxx.cflags += ['/Od', '/RTC1']
-
-    # Don't omit the frame pointer.
-    # This needs to be after our optimization flags which could otherwise disable it.
-    if cxx.behavior == 'gcc':
-      cxx.cflags += ['-fno-omit-frame-pointer']
-    elif cxx.behavior == 'msvc':
-      cxx.cflags += ['/Oy-']
-
-    # Platform-specifics
-    if cxx.target.platform == 'linux':
-      cxx.defines += ['LINUX', '_LINUX', 'POSIX', '_FILE_OFFSET_BITS=64']
-      if cxx.family == 'gcc':
-        cxx.linkflags += ['-static-libgcc']
-      elif cxx.family == 'clang':
-        cxx.linkflags += ['-lgcc_eh']
-      cxx.linkflags += ['-static-libstdc++']
-      cxx.linkflags += ['-Wl,--exclude-libs,ALL']
-    elif cxx.target.platform == 'mac':
-      cxx.defines += ['OSX', '_OSX', 'POSIX']
-
-      if cxx.version >= 'apple-clang-10.0':
-        cxx.cflags += ['-mmacosx-version-min=10.9', '-stdlib=libc++']
-        cxx.linkflags += [
-          '-mmacosx-version-min=10.9',
-        ]
-      else:
-        cxx.cflags += ['-mmacosx-version-min=10.5']
-        cxx.linkflags += [
-          '-mmacosx-version-min=10.5',
-        ]
-
-      cxx.linkflags += [
-        '-stdlib=libc++',
-        '-lc++',
-      ]
-      cxx.cxxflags += ['-stdlib=libc++']
-    elif cxx.target.platform == 'windows':
-      cxx.defines += ['WIN32', '_WINDOWS']
-
-    # Finish up.
-    cxx.defines += [ 'MMS_USE_VERSIONLIB' ]
-    cxx.includes += [
-      os.path.join(builder.sourcePath, 'public'),
-      os.path.join(builder.sourcePath, 'third_party', 'amtl'),
-    ]
-    if self.use_auto_versioning():
-      cxx.defines += ['MMS_GENERATED_BUILD']
-      cxx.includes += [
-        os.path.join(builder.buildPath, 'includes'),
-        os.path.join(builder.sourcePath, 'versionlib'),
-      ]
+    # shared.ambuild's compiler flags (by compiler family, with optimization
+    # and debugging), the platform file, then what every platform gets last.
+    Shared.ConfigureCompiler(cxx, builder.options)
+    self.Platform(cxx).ConfigureCxx(cxx, builder.options)
+    Shared.ConfigureCxx(builder, cxx, builder.options, self)
 
   def AddVersioning(self, binary):
     if binary.compiler.target.platform == 'windows':
@@ -387,25 +243,8 @@ class MMSConfig(object):
 
   def HL2Library(self, context, compiler, name, sdk):
     binary = self.Library(compiler, name)
-    cxx = binary.compiler
-
-    cxx.cxxincludes += [
-      os.path.join(context.currentSourcePath),
-      os.path.join(context.sourcePath, 'loader'),
-    ]
-
-    for other_sdk in self.sdk_manifests:
-      cxx.defines += ['SE_{}={}'.format(other_sdk['define'], other_sdk['code'])]
-
-    if sdk['source2']:
-      cxx.defines += ['META_IS_SOURCE2']
-      binary.sources += [
-        os.path.join(sdk['path'], 'public', 'tier0', 'memoverride.cpp'),
-        os.path.join(sdk['path'], 'tier0_perproject', 'convar.cpp'),
-      ]
-
+    Shared.ConfigureBinary(context, binary, sdk, self)
     self.SdkHelpers(sdk).configureCxx(context, binary, sdk)
-
     return binary
 
 if getattr(builder, 'target', None) is not None:
@@ -429,6 +268,7 @@ if MMS.use_auto_versioning():
     { 'MMS': MMS }
   )
 
+# The binaries keep their per-folder AMBuilders (loader/, core/).
 BuildScripts = [
   'loader/AMBuilder',
   'core/AMBuilder',
@@ -440,7 +280,7 @@ if getattr(builder.options, 'enable_tests', False):
 
 if builder.backend == 'amb2':
   BuildScripts += [
-    'support/buildbot/PackageScript',
+    'makefiles/ambuild/package.ambuild',
   ]
 
 builder.Build(['third_party/khook/AMBuilder', 'third_party/khook/third_party/safetyhook/AMBuilder'], { 'KHook': MMS, 'SafetyHook': MMS })
