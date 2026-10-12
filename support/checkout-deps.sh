@@ -66,8 +66,19 @@ if [ -z ${sdks+x} ]; then
   sdks+=( darkm swarm bgt eye contagion )
 fi
 
-# The Source 2 SDKs live in s2sdk, which continues their hl2sdk branches.
-s2sdks=( cs2 dota deadlock )
+# The Source 2 SDKs are the ones s2sdk-manifests has a manifest for (cs2, dota,
+# deadlock); they come from s2sdk, which continues their hl2sdk branches. The
+# others are Source 1 SDKs (hl2sdk-manifests), from hl2sdk.
+hl2sdk_url=${HL2SDK_URL:-https://github.com/alliedmodders/hl2sdk}
+s2sdk_url=${S2SDK_URL:-https://github.com/FUNPLAY-pro-CS2/s2sdk}
+
+s2sdks=()
+for manifest in metamod-source/s2sdk-manifests/manifests/*.json; do
+  [ -f "$manifest" ] && s2sdks+=( "$(basename "$manifest" .json)" )
+done
+if [ ${#s2sdks[@]} -eq 0 ]; then
+  s2sdks=( cs2 dota deadlock )
+fi
 
 is_s2sdk ()
 {
@@ -78,13 +89,15 @@ is_s2sdk ()
   return 1
 }
 
-# Check out a local copy of each SDK repository as a proxy.
+# Check out a local copy of each SDK repository as a proxy: proxy <name> <url>
 proxy ()
 {
   if [ ! -d "$1-proxy-repo" ]; then
-    git clone --mirror https://github.com/alliedmodders/$1 $1-proxy-repo
+    git clone --mirror $2 $1-proxy-repo
   else
     cd $1-proxy-repo
+    # A cached proxy may be from another URL
+    git remote set-url origin $2
     git fetch
     cd ..
   fi
@@ -100,17 +113,17 @@ do
     need_hl2sdk=1
   fi
 done
-[ $need_hl2sdk -eq 1 ] && proxy hl2sdk
-[ $need_s2sdk -eq 1 ] && proxy s2sdk
+[ $need_hl2sdk -eq 1 ] && proxy hl2sdk $hl2sdk_url
+[ $need_s2sdk -eq 1 ] && proxy s2sdk $s2sdk_url
 
 for sdk in "${sdks[@]}"
 do
   if is_s2sdk $sdk; then
     repo=s2sdk-proxy-repo
-    origin="https://github.com/alliedmodders/s2sdk"
+    origin=$s2sdk_url
   else
     repo=hl2sdk-proxy-repo
-    origin="https://github.com/alliedmodders/hl2sdk"
+    origin=$hl2sdk_url
   fi
   name=hl2sdk-$sdk
   branch=$sdk

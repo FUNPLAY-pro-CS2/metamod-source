@@ -2,8 +2,10 @@
 .SYNOPSIS
     Downloads dependencies for compiling MetaMod:Source.
 .PARAMETER SDKs
-    List of HL2SDK branch names to downloads. The Source 2 ones (cs2, dota,
-    deadlock) come from s2sdk, which continues their hl2sdk branches.
+    List of HL2SDK branch names to downloads. The Source 2 ones (those
+    s2sdk-manifests has a manifest for: cs2, dota, deadlock) come from s2sdk
+    (FUNPLAY-pro-CS2/s2sdk, or $env:S2SDK_URL), which continues their hl2sdk
+    branches; the others from hl2sdk (alliedmodders/hl2sdk, or $env:HL2SDK_URL).
 #>
 
 [CmdletBinding()]
@@ -77,30 +79,41 @@ if (-not (Test-Path "metamod-source" -PathType Container))
     Exit 1
 }
 
-$S2SDKs = @('cs2', 'dota', 'deadlock')
+$HL2SDKUrl = If ($env:HL2SDK_URL) { $env:HL2SDK_URL } Else { 'https://github.com/alliedmodders/hl2sdk' }
+$S2SDKUrl = If ($env:S2SDK_URL) { $env:S2SDK_URL } Else { 'https://github.com/FUNPLAY-pro-CS2/s2sdk' }
+
+$S2SDKs = @(Get-ChildItem -Path 'metamod-source/s2sdk-manifests/manifests' -Filter '*.json' -ErrorAction SilentlyContinue |
+    ForEach-Object { $_.BaseName })
+If ($S2SDKs.Count -eq 0) { $S2SDKs = @('cs2', 'dota', 'deadlock') }
 
 Function Update-Proxy
 {
-    param([Parameter(Mandatory=$true)][string]$Repo)
+    param(
+        [Parameter(Mandatory=$true)][string]$Repo,
+        [Parameter(Mandatory=$true)][string]$Url
+    )
 
     If (-not (Test-Path "$Repo-proxy-repo" -PathType Container))
     {
-        & git clone --mirror "https://github.com/alliedmodders/$Repo" "$Repo-proxy-repo" 2>&1 | Write-Host
+        & git clone --mirror $Url "$Repo-proxy-repo" 2>&1 | Write-Host
     }
     Else
     {
         Set-Location "$Repo-proxy-repo"
+        # A cached proxy may be from another URL
+        & git remote set-url origin $Url 2>&1 | Write-Host
         & git fetch 2>&1 | Write-Host
         Set-Location ..
     }
 }
 
-If ($SDKS | Where-Object { $S2SDKs -notcontains $_ }) { Update-Proxy 'hl2sdk' }
-If ($SDKS | Where-Object { $S2SDKs -contains $_ }) { Update-Proxy 's2sdk' }
+If ($SDKS | Where-Object { $S2SDKs -notcontains $_ }) { Update-Proxy 'hl2sdk' $HL2SDKUrl }
+If ($SDKS | Where-Object { $S2SDKs -contains $_ }) { Update-Proxy 's2sdk' $S2SDKUrl }
 
 $SDKS | ForEach-Object {
     $Repo = If ($S2SDKs -contains $_) { 's2sdk' } Else { 'hl2sdk' }
-    Get-Repository -Name "hl2sdk-$_" -Branch $_ -Repo "$Repo-proxy-repo" "https://github.com/alliedmodders/$Repo.git"
+    $Url = If ($S2SDKs -contains $_) { $S2SDKUrl } Else { $HL2SDKUrl }
+    Get-Repository -Name "hl2sdk-$_" -Branch $_ -Repo "$Repo-proxy-repo" $Url
 }
 
 # Find a suitable installation of Python
