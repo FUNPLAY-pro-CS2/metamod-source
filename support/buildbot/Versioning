@@ -16,15 +16,26 @@ outputs = [
   os.path.join(builder.buildFolder, 'includes', 'metamod_version_auto.h')
 ]
 
-with open(os.path.join(builder.sourcePath, '.git', 'HEAD'), encoding='utf-8') as fp:
+# In a git worktree, .git is a file pointing to the worktree's git folder, which
+# has HEAD; the refs are in the main repository's (its "commondir").
+git_dir = os.path.join(builder.sourcePath, '.git')
+if os.path.isfile(git_dir):
+  with open(git_dir, encoding='utf-8') as fp:
+    git_dir = os.path.join(builder.sourcePath, fp.read().strip().split(':', 1)[1].strip())
+git_common_dir = git_dir
+if os.path.isfile(os.path.join(git_dir, 'commondir')):
+  with open(os.path.join(git_dir, 'commondir'), encoding='utf-8') as fp:
+    git_common_dir = os.path.join(git_dir, fp.read().strip())
+
+with open(os.path.join(git_dir, 'HEAD'), encoding='utf-8') as fp:
   head_contents = fp.read().strip()
   if re.search('^[a-fA-F0-9]{40}$', head_contents):
-    git_head_path = os.path.join(builder.sourcePath, '.git', 'HEAD')
+    git_head_path = os.path.join(git_dir, 'HEAD')
   else:
     git_state = head_contents.split(':')[1].strip()
-    git_head_path = os.path.join(builder.sourcePath, '.git', git_state)
+    git_head_path = os.path.join(git_common_dir, git_state)
     if not os.path.exists(git_head_path):
-      git_head_path = os.path.join(builder.sourcePath, '.git', 'HEAD')
+      git_head_path = os.path.join(git_dir, 'HEAD')
 
 sources = [
   os.path.join(builder.sourcePath, 'product.version'),
