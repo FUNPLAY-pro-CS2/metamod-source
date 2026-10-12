@@ -68,8 +68,18 @@ jobs:
         shell: bash
         run: |
           sdk_list=()
-          for file in metamod-source/hl2sdk-manifests/manifests/*.json; do
+          # Source 2 SDKs from s2sdk-manifests (checkout-deps.sh clones them from
+          # s2sdk), Source 1 from hl2sdk-manifests, without the games it shares with
+          # s2sdk-manifests.
+          s2sdks=()
+          for file in metamod-source/s2sdk-manifests/manifests/*.json; do
+            s2sdks+=("$(basename "$file" .json)")
+          done
+          for file in metamod-source/hl2sdk-manifests/manifests/*.json metamod-source/s2sdk-manifests/manifests/*.json; do
             sdk=$(basename "$file" .json)
+            if [[ $file == */hl2sdk-manifests/* && " ${s2sdks[*]} " == *" $sdk "* ]]; then
+              continue
+            fi
             if [[ $sdk == "mock" ]]; then
               # We don't need to ship a build for the mock SDK
               continue
@@ -89,7 +99,7 @@ jobs:
       - name: Cache dependencies
         uses: actions/cache@v5
         env:
-          cache-name: hl2sdk
+          cache-name: hl2sdk-s2sdk
         with:
           path: ${{ steps.path_helper.outputs.dependencies }}
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ join(fromJson(steps.sdk_list.outputs.sdk_list), '') }}
