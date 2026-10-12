@@ -46,6 +46,18 @@ cd build
 python ../configure.py --sdks episode1
 ```
 
+The Source 1 SDKs are described by the `hl2sdk-manifests` submodule, the Source 2 ones (cs2, dota,
+deadlock) by `s2sdk-manifests` and come from [s2sdk](https://github.com/FUNPLAY-pro-CS2/s2sdk)
+(`--hl2sdk-manifests` / `--s2sdk-manifests` point elsewhere). An s2sdk checkout is also found through
+`S2SDK` (cs2), `S2SDK_DOTA`, `HL2SDKCS2`, ... as listed in its manifest.
+
+The build settings are in `makefiles/ambuild/`. For one Source 2 SDK there is a CMake build too, with the
+same settings in `makefiles/cmake/`, e.g. for an IDE:
+```
+cmake -S . -B cmake-build-relwithdebinfo -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMMS_SDK=cs2
+cmake --build cmake-build-relwithdebinfo
+```
+
 Stable build snapshots: <http://www.metamodsource.net/downloads.php/?branch=stable>
 
 Development build snapshots: <http://www.metamodsource.net/downloads.php/?branch=master>

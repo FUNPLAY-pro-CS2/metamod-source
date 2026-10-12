@@ -27,3 +27,6 @@ build/
 build-*/
 obj-*/
 .gdb_history
+
+# CMake build directories
+cmake-build-*/
