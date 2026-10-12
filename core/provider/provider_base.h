@@ -35,6 +35,14 @@
 #if !defined META_IS_SOURCE2
 #include "iserverplugin.h"
 #endif
+#if defined META_IS_SOURCE2
+// s2sdk split eiface.h up under engine2/
+#include "engine2/isource2server.h"
+#include "engine2/ivengineserver2.h"
+#include "engine2/inetworkserverservice.h"
+#include "engine2/iengineservicemgr.h"
+#include "icvar.h"
+#endif
 #include "ISmmAPI.h"
 #include "metamod_provider.h"
 #include "metamod_oslink.h"
