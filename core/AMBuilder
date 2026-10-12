@@ -31,9 +31,10 @@ for sdk_target in MMS.sdk_targets:
     binary.sources += [
       'provider/source2/provider_source2.cpp',
     ]
-    binary.custom = [builder.tools.Protoc(protoc = sdk_target.protoc, sources = [
-      os.path.join(sdk['path'], 'common', 'network_connection.proto'),
-    ])]
+    # s2sdk-manifests' addProtobufs() (s2sdk_protobufs() in CMakeBuilder.cmake)
+    MMS.S2SdkHelpers.addProtobufs(builder, binary, sdk_target, [
+      'common/network_connection.proto',
+    ])
   else:
     binary.sources += [
       'provider/source/provider_source.cpp',

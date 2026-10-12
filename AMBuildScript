@@ -17,9 +17,21 @@ def ResolveEnvPath(env, folder):
       head, tail = os.path.split(head)
   return None
 
-SdkHelpers = builder.Eval('hl2sdk-manifests/SdkHelpers.ambuild', {
-    'Project': 'metamod'
+# --hl2sdk-manifests / --s2sdk-manifests, else the submodule of the same name.
+def ResolveManifests(option, submodule):
+  path = getattr(builder.options, option, None) or os.path.join(builder.sourcePath, submodule)
+  path = os.path.abspath(os.path.normpath(path))
+  if not os.path.isfile(os.path.join(path, 'SdkHelpers.ambuild')):
+    raise Exception('Could not find {0} in {1} (git submodule update --init?)'.format(submodule, path))
+  return path
+
+# Source 1 SDKs come from hl2sdk-manifests, the Source 2 ones (cs2, dota,
+# deadlock) from s2sdk-manifests. hl2sdk-manifests still lists the Source 2
+# games as well; they are filtered out of it, so no SDK is found twice.
+HL2SdkHelpers = builder.Eval(os.path.join(ResolveManifests('hl2sdk_manifests', 'hl2sdk-manifests'), 'SdkHelpers.ambuild'), {
+  'Project': 'metamod'
 })
+S2SdkHelpers = builder.Eval(os.path.join(ResolveManifests('s2sdk_manifests', 's2sdk-manifests'), 'SdkHelpers.ambuild'))
 
 class MMSConfig(object):
   def __init__(self):
@@ -33,6 +45,7 @@ class MMSConfig(object):
     self.target_archs = set()
     self.libsafetyhook = {}
     self.libkhook = {}
+    self.S2SdkHelpers = S2SdkHelpers
 
     if builder.options.targets:
       target_archs = builder.options.targets.split(',')
@@ -75,12 +88,27 @@ class MMSConfig(object):
       major, minor, release = m.groups()
       self.productVersion = '{0}.{1}.{2}'.format(major, minor, release)
 
+  # Source 1: <hl2sdk-root>/hl2sdk-<name>, HL2SDK<NAME>, or a hl2sdk-<name> folder above.
   def findSdkPath(self, sdk_name):
     dir_name = 'hl2sdk-{}'.format(sdk_name)
     if builder.options.hl2sdk_root:
       sdk_path = os.path.abspath(os.path.normpath(os.path.join(builder.options.hl2sdk_root, dir_name)))
       if os.path.exists(sdk_path):
         return sdk_path
+    return ResolveEnvPath('HL2SDK{}'.format(sdk_name.upper()), dir_name)
+
+  # Source 2: <hl2sdk-root>/hl2sdk-<name> (where checkout-deps puts s2sdk), the
+  # manifest's env_vars (S2SDK_CS2, S2SDKCS2, S2SDK, HL2SDK_CS2, HL2SDKCS2 for
+  # cs2; the first one set wins), or a hl2sdk-<name> folder above.
+  def findS2SdkPath(self, sdk_name):
+    dir_name = 'hl2sdk-{}'.format(sdk_name)
+    if builder.options.hl2sdk_root:
+      sdk_path = os.path.abspath(os.path.normpath(os.path.join(builder.options.hl2sdk_root, dir_name)))
+      if os.path.exists(sdk_path):
+        return sdk_path
+    sdk_path = type(S2SdkHelpers).findSdkPathFromEnv(sdk_name)
+    if sdk_path is not None and os.path.isdir(sdk_path):
+      return sdk_path
     return ResolveEnvPath('HL2SDK{}'.format(sdk_name.upper()), dir_name)
 
   def shouldIncludeSdk(self, sdk):
@@ -90,20 +118,55 @@ class MMSConfig(object):
 
   def detectSDKs(self):
     sdk_list = [s for s in builder.options.sdks.split(',') if s]
-    SdkHelpers.sdk_filter = self.shouldIncludeSdk
-    SdkHelpers.find_sdk_path = self.findSdkPath
-    SdkHelpers.findSdks(builder, self.all_targets, sdk_list)
+    s2_names = set(sdk['name'] for _, sdk in type(S2SdkHelpers).getSdks(None))
+    keywords = [s for s in sdk_list if s in ['all', 'present']]
+    hl2_list = keywords + [s for s in sdk_list if s not in keywords and s not in s2_names]
+    s2_list = keywords + [s for s in sdk_list if s in s2_names]
 
-    self.sdks = SdkHelpers.sdks
-    self.sdk_manifests = SdkHelpers.sdk_manifests
-    self.sdk_targets = SdkHelpers.sdk_targets
+    HL2SdkHelpers.sdk_filter = lambda sdk: sdk['name'] not in s2_names and self.shouldIncludeSdk(sdk)
+    HL2SdkHelpers.find_sdk_path = self.findSdkPath
+    S2SdkHelpers.sdk_filter = self.shouldIncludeSdk
+    S2SdkHelpers.find_sdk_path = self.findS2SdkPath
+
+    for helpers, names in [(HL2SdkHelpers, hl2_list), (S2SdkHelpers, s2_list)]:
+      try:
+        helpers.findSdks(builder, self.all_targets, names)
+      except Exception as e:
+        # With "all" or "present", one of the two may have nothing to build;
+        # whether anything was found at all is checked below.
+        if not keywords or not str(e).startswith('No buildable SDKs'):
+          raise
+
+    self.sdks = dict(HL2SdkHelpers.sdks)
+    self.sdks.update(S2SdkHelpers.sdks)
+    self.sdk_targets = HL2SdkHelpers.sdk_targets + S2SdkHelpers.sdk_targets
+    if sdk_list and not self.sdk_targets:
+      raise Exception('No buildable SDKs were found, nothing to build.')
+
+    # Every SDK of both manifests, for the SE_<define>=<code> table. A game in
+    # both has to have the same code and define in each.
+    by_name = {}
+    for sdk in HL2SdkHelpers.sdk_manifests + S2SdkHelpers.sdk_manifests:
+      other = by_name.get(sdk['name'])
+      if other is None:
+        by_name[sdk['name']] = sdk
+        self.sdk_manifests.append(sdk)
+      elif (other['code'], other['define']) != (sdk['code'], sdk['define']):
+        raise Exception('{0}: hl2sdk-manifests has SE_{1}={2}, s2sdk-manifests SE_{3}={4}'.format(
+          sdk['name'], other['define'], other['code'], sdk['define'], sdk['code']))
+
+  # The SdkHelpers the SDK was found with.
+  def SdkHelpers(self, sdk):
+    if sdk['name'] in S2SdkHelpers.sdks:
+      return S2SdkHelpers
+    return HL2SdkHelpers
 
   def configure(self):
     builder.AddConfigureFile('pushbuild.txt')
 
     for cxx in self.all_targets:
       if cxx.target.arch not in ['x86', 'x86_64']:
-        raise Exception('Unknown target architecture: {0}'.format(arch))
+        raise Exception('Unknown target architecture: {0}'.format(cxx.target.arch))
 
       self.configure_cxx(cxx)
 
@@ -303,7 +366,7 @@ class MMSConfig(object):
       binary.sources += [
         os.path.join(builder.sourcePath, 'third_party', 'amtl', 'compat', 'stdcxx.cpp')
       ]
-    
+
     return binary
 
   def Program(self, compiler, name):
@@ -318,7 +381,7 @@ class MMSConfig(object):
     if binary.compiler.like('gcc'):
       binary.compiler.linkflags += ['-lstdc++']
     return binary
-    
+
   def StaticLibrary(self, cxx, name):
     return cxx.StaticLibrary(name)
 
@@ -341,7 +404,7 @@ class MMSConfig(object):
         os.path.join(sdk['path'], 'tier0_perproject', 'convar.cpp'),
       ]
 
-    SdkHelpers.configureCxx(context, binary, sdk)
+    self.SdkHelpers(sdk).configureCxx(context, binary, sdk)
 
     return binary
 

@@ -21,6 +21,12 @@ if ambuild_version.startswith('2.1'):
 parser = run.BuildParser(sourcePath=sys.path[0], api='2.2')
 parser.options.add_argument('--hl2sdk-root', type=str, dest='hl2sdk_root', default=None,
                        help='Root search folder for HL2SDKs')
+parser.options.add_argument('--hl2sdk-manifests', type=str, dest='hl2sdk_manifests', default=None,
+                       help='hl2sdk-manifests source tree folder, for the Source 1 SDKs '
+                            '(default: the hl2sdk-manifests submodule)')
+parser.options.add_argument('--s2sdk-manifests', type=str, dest='s2sdk_manifests', default=None,
+                       help='s2sdk-manifests source tree folder, for the Source 2 SDKs '
+                            '(default: the s2sdk-manifests submodule)')
 parser.options.add_argument('--enable-debug', action='store_const', const='1', dest='debug',
                        help='Enable debugging symbols')
 parser.options.add_argument('--enable-optimize', action='store_const', const='1', dest='opt',
