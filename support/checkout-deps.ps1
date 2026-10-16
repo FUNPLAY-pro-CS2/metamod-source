@@ -4,7 +4,7 @@
 .PARAMETER SDKs
     List of HL2SDK branch names to downloads. The Source 2 ones (those
     s2sdk-manifests has a manifest for: cs2, dota, deadlock) come from s2sdk
-    (FUNPLAY-pro-CS2/s2sdk, or $env:S2SDK_URL), which continues their hl2sdk
+    (Source2Mod/s2sdk, or $env:S2SDK_URL), which continues their hl2sdk
     branches; the others from hl2sdk (alliedmodders/hl2sdk, or $env:HL2SDK_URL).
 #>
 
@@ -80,7 +80,7 @@ if (-not (Test-Path "metamod-source" -PathType Container))
 }
 
 $HL2SDKUrl = If ($env:HL2SDK_URL) { $env:HL2SDK_URL } Else { 'https://github.com/alliedmodders/hl2sdk' }
-$S2SDKUrl = If ($env:S2SDK_URL) { $env:S2SDK_URL } Else { 'https://github.com/FUNPLAY-pro-CS2/s2sdk' }
+$S2SDKUrl = If ($env:S2SDK_URL) { $env:S2SDK_URL } Else { 'https://github.com/Source2Mod/s2sdk' }
 
 $S2SDKs = @(Get-ChildItem -Path 'metamod-source/s2sdk-manifests/manifests' -Filter '*.json' -ErrorAction SilentlyContinue |
     ForEach-Object { $_.BaseName })

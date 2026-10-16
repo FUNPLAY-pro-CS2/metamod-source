@@ -47,7 +47,7 @@ python ../configure.py --sdks episode1
 ```
 
 The Source 1 SDKs are described by the `hl2sdk-manifests` submodule, the Source 2 ones (cs2, dota,
-deadlock) by `s2sdk-manifests` and come from [s2sdk](https://github.com/FUNPLAY-pro-CS2/s2sdk)
+deadlock) by `s2sdk-manifests` and come from [s2sdk](https://github.com/Source2Mod/s2sdk)
 (`--hl2sdk-manifests` / `--s2sdk-manifests` point elsewhere). An s2sdk checkout is also found through
 `S2SDK` (cs2), `S2SDK_DOTA`, `HL2SDKCS2`, ... as listed in its manifest.
 

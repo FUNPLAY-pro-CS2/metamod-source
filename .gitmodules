@@ -9,4 +9,4 @@
 	url = https://github.com/Kenzzer/KHook
 [submodule "s2sdk-manifests"]
 	path = s2sdk-manifests
-	url = https://github.com/FUNPLAY-pro-CS2/s2sdk-manifests
+	url = https://github.com/Source2Mod/s2sdk-manifests

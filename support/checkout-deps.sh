@@ -70,7 +70,7 @@ fi
 # deadlock); they come from s2sdk, which continues their hl2sdk branches. The
 # others are Source 1 SDKs (hl2sdk-manifests), from hl2sdk.
 hl2sdk_url=${HL2SDK_URL:-https://github.com/alliedmodders/hl2sdk}
-s2sdk_url=${S2SDK_URL:-https://github.com/FUNPLAY-pro-CS2/s2sdk}
+s2sdk_url=${S2SDK_URL:-https://github.com/Source2Mod/s2sdk}
 
 s2sdks=()
 for manifest in metamod-source/s2sdk-manifests/manifests/*.json; do
